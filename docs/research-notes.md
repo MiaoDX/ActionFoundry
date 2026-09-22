@@ -1,91 +1,33 @@
-# Research Notes
+# Research synthesis and provenance
 
-## Working hypothesis
+## What the project preserves
 
-A useful way to structure robot decision making is to separate **proposal** from **selection**. Instead of requiring a policy to directly generate the final action, the system can expose a bounded set of plausible actions or short-horizon trajectories and explicitly evaluate them before execution.
+The discussion began with Jev's structured decision interface, broadened to robot control, then examined relative moves, action chunks, value/critic selection, and intermediate interfaces including Show-Harness. The durable question is not whether one reference should replace every other architecture. It is whether making executable alternatives explicit helps a robot choose, abstain, or recover under controlled comparisons.
 
-This repository treats that decomposition as the research object rather than committing to a particular model family.
+The accepted engineering choices are in [decisions](decisions.md). The research hypotheses remain open, and the [reference landscape](references.md) contains competing and adjacent approaches rather than a single claimed lineage.
 
-## Synthesis
+## Evidence provenance
 
-### The research question is larger than any one reference method
+This revision is a new primary-source-checked synthesis of the visible discussion and repository. The separate Deep Research session's full report was not available as a retrievable artifact in this editing session; it has **not** been imported or represented as a recovered report. The earlier repository notes were a discussion synthesis, not a documented literature review. This source map supplies explicit traceable references without inventing missing research output.
 
-The motivating ideas touch vision-language-action policies, value functions and critics, model-predictive control, trajectory sampling, learning-to-rank, multimodal judging, and fast/slow decision systems. None of these labels should define the repository prematurely.
+No ActionFoundry runtime, training, or manipulation experiment was run for this design revision. Literature claims are attributed to their authors, not independently reproduced.
 
-The durable question is whether an explicit **candidate → evaluate → select → execute** interface creates better controllability, diagnostics, and learning opportunities for embodied agents.
+## Corrections that affect design
 
-### Candidate quality and selector quality must be disentangled
+**Candidate selection is established prior art.** QT-Opt, Implicit Behavioral Cloning, SayCan, and especially V-GPS prevent treating proposal-plus-ranking alone as a novel contribution. The open question is the measured benefit of the particular interface, supervision, generalization behavior, or cost/quality tradeoff [R04](references.md#r04) / [R05](references.md#r05) / [R06](references.md#r06) / [R07](references.md#r07).
 
-A selector cannot recover an action that was never proposed. Experiments should report both whether a successful/near-optimal candidate existed in the set and whether the selector chose it. This motivates oracle-in-set evaluation and controlled candidate pools.
+**Relative action is not one representation.** Sequential deltas, current-pose-anchored trajectories, discrete spatial targets, and semantic moves are distinct. Action chunking is a temporal choice independent of whether the coordinates are absolute or relative. ACT's original joint-position interface and PerAct's spatial action representation should not be relabeled as relative end-effector control [R11](references.md#r11) / [R12](references.md#r12) / [R13](references.md#r13) / [R14](references.md#r14).
 
-### Start with representations and an evaluation harness
+**A typed probability head does not establish calibration.** Valid syntax is not correct semantics; choosing the most likely option is not predicting its physical success. Auxiliary success/risk heads need separate outcome labels and evaluation. Unchosen demonstration actions are not automatically negative examples [R09](references.md#r09) / [R18](references.md#r18) / [R20](references.md#r20).
 
-The highest-leverage early work is not training a large judge. It is defining candidate schemas and coordinate conventions, deterministic proposal mechanisms, feasibility/safety filters, replayable decision traces, oracle and heuristic baselines, latency accounting, and closed-loop metrics.
+**Fast/slow terminology is not a common implementation.** A WAM may infer action chunks without rolling out explicit future video; a robotic System 1 can be a diffusion action generator. Optional prediction and candidate scoring therefore require actual interfaces, not terminology-based assumptions [R24](references.md#r24) / [R25](references.md#r25).
 
-### Non-learned baselines are part of the research
+**Show-Harness is a comparator, not a new mandate.** Its interpreter-based action interface belongs in the action-representation study. It does not displace direct policies, continuous chunks, or value-guided approaches in the workbench [R08](references.md#r08).
 
-Geometry, collision checks, kinematic feasibility, goal distance, trajectory cost, and classical planning can be strong signals. They establish what information a learned evaluator actually adds.
+**Reference status matters.** AVP is withdrawn as of the source-check date, so its earlier cited performance is no longer used to support the design. Other unverified earlier claims remain leads rather than evidence [R26](references.md#r26).
 
-### Learned selection admits multiple formulations
+## Remaining research questions
 
-**Pointwise scoring.** Predict a scalar value/success score for each candidate. Simple and cacheable, but calibration and cross-set comparability matter.
+Where does failure originate: insufficient proposals, incorrect value estimates, missing observations, bad control interpretation, or recovery? Does a scorer transfer across proposal sources or merely learn their ordering? Does its benefit survive equal action support, controller, supervision, and wall-clock budgets? Does an apparent state-based advantage survive visual perception and model latency? These questions determine the next stage; the project is not required to produce a Jev-like model if simpler baselines solve the problem.
 
-**Pairwise ranking.** Compare two candidates. This may ease supervision but can be expensive at inference and can create non-transitive preferences.
-
-**Set-aware selection.** Score/select candidates jointly, allowing relative context and diversity to matter. More expressive, but coupled to candidate-set size/distribution.
-
-**Critic/value estimation.** Estimate downstream return or success conditioned on state/task and candidate. Natural for control, but target construction matters.
-
-**Multimodal judging.** Use visual/language reasoning for semantic compatibility that geometry alone cannot capture. Latency, calibration, and grounding must be measured.
-
-These are hypotheses to compare, not a predetermined progression.
-
-### Closed-loop behavior matters more than offline ranking alone
-
-A candidate can look locally optimal yet lead to a brittle future state. The evaluation stack therefore needs both offline diagnostics and closed-loop rollouts. Receding-horizon selection offers a practical bridge: select a short action/trajectory, execute a bounded portion, observe, and reconsider.
-
-### Fast and slow pathways are an architectural hypothesis
-
-A longer-term direction is a fast selector for routine, high-confidence decisions combined with a slower proposal/reasoning/replanning path when confidence is low, constraints conflict, or the candidate set is inadequate.
-
-The engineering question is operational: **when can a cheap selector safely act, and when should the system spend more computation or regenerate candidates?**
-
-## Key experimental questions
-
-1. How does performance scale with candidate-set size and diversity?
-2. Which action representation is easiest to evaluate while remaining executable?
-3. How much does learned scoring improve over geometry/constraint/task heuristics?
-4. Is ranking easier or more transferable than direct action generation?
-5. Can a selector trained on one proposal distribution generalize to another?
-6. How should uncertainty trigger abstention or replanning?
-7. What is the latency/quality frontier for fast versus deliberative selection?
-8. Which failures originate in context, proposal, scoring, selection, or execution?
-
-## Proposed first benchmark slice
-
-1. Pick one simulator/task family with deterministic replay.
-2. Define one candidate representation, preferably short-horizon trajectories or parameterized motion primitives.
-3. Generate candidate sets with at least one deterministic sampler/planner.
-4. Implement hard validity checks and transparent heuristic scores.
-5. Compute oracle-in-set performance.
-6. Log complete decision traces.
-7. Run closed-loop selection with deterministic baselines.
-8. Only then add the first learned scorer.
-
-The first learned experiment should hold the candidate generator fixed. This gives a clean answer to whether learning improves **selection** before proposal learning becomes another variable.
-
-## Failure taxonomy
-
-- **Context failure:** relevant state/task information is missing or incorrectly encoded.
-- **Proposal failure:** no acceptable candidate was generated.
-- **Constraint failure:** an invalid candidate was allowed through.
-- **Scoring failure:** candidate utilities were estimated incorrectly.
-- **Selection failure:** the decision rule chose poorly despite useful scores.
-- **Execution failure:** the chosen candidate could not be realized as expected.
-- **Recovery failure:** the closed-loop system failed to detect or correct a bad transition.
-
-## Near-term deliverables
-
-Optimize initially for experimental clarity rather than breadth: typed schemas, environment adapter(s), proposal interface, evaluator interface, trace format, deterministic baseline implementations, and a minimal benchmark runner.
-
-Once those exist, the research can branch into learned ranking/value models, multimodal judging, proposal learning, and fast/slow control without rewriting the experimental foundation.
+The phased plan starts with falsifiable contracts and diagnostics. Positive, negative, saturated, and blocked experiments are all legitimate outputs when accompanied by reproducible traces.

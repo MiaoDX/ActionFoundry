@@ -2,64 +2,59 @@
 
 **A research workbench for candidate-based robot action selection.**
 
-ActionFoundry explores an alternative to treating robot control as a single monolithic action-generation problem. The central question is:
+ActionFoundry studies when explicit action proposals, evaluation, and selection improve robot manipulation—and when direct policies or ordinary control are the better solution. Jev and Show-Harness are references, not mandatory dependencies or a predetermined architecture.
 
-> Given the current observation, task context, and a structured set of candidate actions or trajectories, how should a robot evaluate, select, and execute the next action?
+> Given an observation, a task, and a set of executable alternatives, what is gained by deciding among those alternatives explicitly?
 
-The project is deliberately staged: first build a reliable candidate/action interface and evaluation harness, then establish non-learned baselines, and only then introduce learned scoring, selection, and planning components.
-
-<p align="center"><img src="docs/assets/architecture.svg" alt="ActionFoundry architecture" width="900"></p>
-
-## Research thesis
-
-Modern robot policies often collapse perception, reasoning, action generation, and control into one learned mapping. ActionFoundry separates these concerns around an explicit **candidate set**. Candidates may come from motion primitives, trajectory samplers, planners, policies, retrieval, or learned proposal models. A selector evaluates them using task relevance, feasibility, safety, progress, value, uncertainty, or other signals before execution.
-
-This decomposition gives us a clean place to ask:
-
-- Can explicit candidate selection improve robustness or sample efficiency relative to direct action generation?
-- Which candidate representations are useful: discrete actions, motion primitives, short-horizon trajectories, or hybrids?
-- How much can deterministic/model-based scoring achieve before learning is required?
-- Can a learned judge/value/ranker generalize across proposal mechanisms?
-- When can a fast selector act, and when should a slower replanning path take over?
-
-## Architecture
-
-The intended loop is:
-
-`observation + task → context → candidate proposal → constraints / scoring → selection → execution → feedback`
-
-Proposal, evaluation, and selection are independently replaceable and benchmarkable. See [Architecture](docs/architecture.md).
-
-## Roadmap
-
-| Phase | Goal | Main output |
-| --- | --- | --- |
-| **0 — Contract** | Define observations, candidates, evaluations, traces, and metrics | Stable interfaces and schemas |
-| **1 — Harness** | Make candidate generation and evaluation reproducible | Evaluation harness + deterministic baselines |
-| **2 — Learned selection** | Learn to score/rank/select candidates | Judge/value/ranker baselines |
-| **3 — Closed loop** | Re-select under execution feedback | Receding-horizon decision loop |
-| **4 — Extensions** | Compare proposal sources, representations, and reasoning regimes | Ablations and research results |
-
-The sequencing principle is **measure first, learn second**.
-
-## Design principles
-
-1. **Explicit candidates.** Make action alternatives inspectable.
-2. **Proposal/selection separation.** Candidate generation and evaluation need not be the same model.
-3. **Strong non-learned baselines first.** Establish what geometry, constraints, heuristics, and planning already solve.
-4. **Trace every decision.** Preserve candidates, scores, rejection reasons, selected actions, latency, and outcomes.
-5. **Closed-loop evaluation.** Offline ranking accuracy is insufficient; measure downstream task behavior.
-6. **Architecture before model branding.** The repository should survive changes in VLM/VLA/judge/planner choices.
-
-## Documents
-
-- [Architecture](docs/architecture.md) — module boundaries, contracts, metrics, and staged implementation.
-- [Research Notes](docs/research-notes.md) — synthesis of the motivating discussion and deep-research direction.
+<p align="center"><img src="docs/assets/architecture.svg" alt="Observation, proposal, evaluation, selection and execution with feedback" width="900"></p>
 
 ## Status
 
-Early research scaffold. The repository currently captures the working hypothesis and implementation plan before committing to a specific learning stack.
+**Design specification v0.1 · September 22, 2026.** This repository contains research and engineering specifications, not a working robot runtime. No ActionFoundry training runs or manipulation results are claimed. Example configurations describe the implementation contract; they are not executable yet.
+
+## Design in brief
+
+- Separate candidate proposal, representation, scoring, selection, and execution. Preserve a direct-policy baseline outside the candidate path.
+- Begin with transparent, state-based simulation and no model training. Introduce learned selection only after replay and proposal quality are measurable.
+- Keep deployable observations separate from privileged simulator diagnostics. Treat candidate-choice scores and physical-success probabilities as different quantities.
+- Evaluate closed-loop behavior from the first simulator milestone. Later phases add recovery, visual policies, and optional world-model evaluation—not the first feedback loop.
+
+## Starting scope
+
+| Stage | Deliverable | Exit evidence |
+| --- | --- | --- |
+| P0 — Contracts | CPU-only mock environment, schemas, frame conversions, traces | Unit, isolation, and replay tests |
+| P1 — Harness | robosuite Panda Lift, then Stack; deterministic proposals and selectors | Paired rollouts, candidate coverage, failure attribution |
+| P2 — Learned selection | Fixed-pool state rankers, direct behavior-cloning control | Held-out regret and closed-loop comparisons |
+| P3 — Transfer and recovery | LIBERO-Spatial, visual policy proposals, bounded replanning | Matched observation/control budgets and OOD evaluation |
+| P4 — Optional extensions | Learned dynamics, richer proposals, joint training | A demonstrated bottleneck and a new experiment protocol |
+
+**Measure first, learn second.** A negative result is a valid outcome; candidate selection is the hypothesis, not the conclusion.
+
+## Start here
+
+[Local development handoff](docs/implementation.md) gives the work order and first acceptance tests. [AGENTS.md](AGENTS.md) defines the instructions for a coding agent.
+
+| Document | Purpose |
+| --- | --- |
+| [Design decisions](docs/decisions.md) | Settled decisions, alternatives, and reopening conditions |
+| [Architecture](docs/architecture.md) | Runtime, diagnostics, fallback, and module boundaries |
+| [Contracts](docs/contracts.md) | Frames, types, score semantics, snapshots, and trace format |
+| [Benchmarks](docs/benchmarks.md) | Environments, proposals, splits, and observation regimes |
+| [Experiments](docs/experiments.md) | Baselines, ablations, labels, metrics, budgets, and gates |
+| [Reference landscape](docs/references.md) | Primary sources, relevance, and evidence limitations |
+| [Research notes](docs/research-notes.md) | Discussion synthesis, provenance, and corrections |
+| [Results template](docs/results-template.md) | Required evidence for future experiment reports |
+
+## Local checkout
+
+```bash
+git clone https://github.com/MiaoDX/ActionFoundry.git
+cd ActionFoundry
+```
+
+There is no installation or experiment command to run until P0 is implemented. Start the coding agent with the handoff in `docs/implementation.md`; do not invent benchmark results to fill the documentation.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE). External code, datasets, checkpoints, and robot assets retain their own licenses. The project license does not relicense third-party material.

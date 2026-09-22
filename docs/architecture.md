@@ -1,104 +1,77 @@
 # Architecture
 
-ActionFoundry is organized around one explicit abstraction: at every decision step, the system operates on a **set of candidate actions** rather than requiring a single model to directly emit the final control command.
+Specification v0.1. This is an experimental runtime design, not an implemented control stack.
 
-![Architecture](assets/architecture.svg)
+![Core decision loop](assets/architecture.svg)
 
-## Decision loop
+The diagram shows the common candidate path. The full design also includes a direct-policy control path and a separate privileged diagnostics process. Neither should be hidden inside the scorer.
 
-### 1. Observation and task context
+## 1. Boundaries
 
-Inputs can include robot state, images, language instructions, environment state, history, and task-specific constraints. A context encoder converts these heterogeneous inputs into a representation usable by proposal and evaluation modules.
+| Component | Input | Output | Must not do |
+| --- | --- | --- | --- |
+| Environment adapter | Valid controller command | Observation, execution status | Expose future labels to a policy |
+| Context builder | Allowed observation, task, past trace | Immutable `Context` | Read privileged evaluator state |
+| Proposer | Context, proposal RNG, budget | Candidate specifications | Query a hidden rollout oracle |
+| Action compiler | Context, candidate, controller contract | Canonical executable plan | Change semantics after scoring |
+| Constraint checker | Context, plan, operational profile | Pass/fail/unknown checks | Treat learned confidence as permission |
+| Outcome predictor, optional | Context, plan | Predicted outcome/features | Substitute true future state without marking privilege |
+| Scorer | Context, candidate set, optional predictions | Per-candidate evaluations | Execute or mutate a candidate |
+| Selector | Evaluations, masks, configured rule | Execute/replan/abort/done request | Force an action from an empty valid set |
+| Executor | Chosen plan and observation identity | Bounded-prefix result | Run an expired plan |
+| Trace writer | Versioned events and artifact references | Append-only record | Mix labels into policy-visible context |
+| Diagnostic evaluator | Hidden snapshot, plans, continuation | Counterfactual labels | Feed labels back into the evaluated policy |
 
-### 2. Candidate proposal
+A `DirectPolicy` returns one executable proposal through the same compiler, operational checks, executor, and logger. It bypasses candidate ranking and remains a first-class comparator, not a disguised `K=1` estimate of selection quality.
 
-A proposal source produces a finite candidate set `C_t = {c_1, …, c_K}`. The source is intentionally replaceable: hand-authored motion primitives, trajectory sampling, classical planners, policy rollouts, retrieval, or learned proposal models.
+## 2. Runtime loop
 
-A candidate should carry enough structure to be evaluated and executed: action/trajectory payload, horizon, coordinate frame, provenance, optional proposal confidence, and auxiliary metadata.
+1. Read an observation and construct context with an explicit observation regime.
+2. Generate specifications deterministically from the proposal RNG. Compile them against the same anchor observation.
+3. Run operational checks. Log rejected candidates and reasons; do not silently replace them.
+4. Evaluate admitted plans. Optional model predictions are stored separately from actual branch outcomes.
+5. Select the highest configured utility, or emit a bounded replan/abort request. Ties use the canonical opaque candidate ID, not array position.
+6. Recheck plan freshness and execute only `execution_steps` controller ticks. The original anchor does not change inside the plan.
+7. Record realized motion, execution failures, checks, and both clocks. Observe again and discard the old candidate set.
 
-### 3. Constraints and scoring
+P1 is already closed loop. P3 adds richer recovery and latency-aware scheduling rather than introducing feedback for the first time.
 
-Candidates may first pass through hard feasibility/safety filters. Remaining candidates receive scores such as task progress, geometric feasibility, collision margin, learned value/success probability, semantic preference, uncertainty, and execution cost.
+## 3. Failure handling
 
-The architecture distinguishes **hard constraints** from **soft preferences**. A learned score should not silently replace a safety invariant.
+The initial runner implements `RUNNING -> REPLAN -> RUNNING` or `ABORTED`; natural environment termination becomes `TERMINATED`, and a step budget becomes `TRUNCATED`. Infrastructure failures have their own `ERROR` state.
 
-### 4. Selection
+An empty admissible pool or entirely nonfinite scores triggers one deterministic reproposal using the documented expanded candidate budget. If it still fails, abort the episode. With synchronous paused simulation, reproposal does not advance physics, but wall time and the reproposal count still accrue. There is no indefinite retry loop or hidden model fallback.
 
-The selector maps the evaluated candidate set to a decision. Initially this can be deterministic (argmax, lexicographic constraints, weighted objectives). Later phases can study learned ranking, pairwise comparison, calibrated value functions, or set-aware selection.
+`HOLD` is an ordinary, bounded pose-maintenance candidate that passes the same checks. It is not a universal safe stop. A hardware adapter needs a separately reviewed stop strategy and is out of scope. A policy `DONE` request is logged but cannot set the benchmark success label.
 
-Abstention/replan is a valid decision: if no candidate is acceptable, request a new proposal set rather than force an action.
+Late remote responses are invalidated by observation identity. P1 does not call remote services. Future online adapters must log request, queue, network, decode, and timeout costs without storing secrets.
 
-### 5. Execution and feedback
+## 4. Information separation
 
-The selected candidate is handed to the robot controller or simulator. Execution produces observations and outcome signals, closing the loop. Receding-horizon operation follows naturally: propose, evaluate, execute a bounded prefix, observe, and reconsider.
+Use different runtime and diagnostic objects/processes. The policy context has no environment handle, snapshot path, reward function, future images, counterfactual outcomes, or evaluator-only success flags. Exact object poses are permitted only in the explicitly state-assisted track.
 
-## Core interfaces
+Snapshots, oracle continuations, and branch labels live in a private diagnostic artifact namespace. Read-only offline joins associate labels with candidate IDs after policy evaluation. An oracle baseline is always reported as privileged and cannot be compared as if it has the same information as a learned runtime scorer.
 
-The first milestone should stabilize four conceptual contracts:
+Past observed failures may be used by a policy only if the failure detector is part of its declared observation contract. Simulator truth is not silently promoted to an online recovery signal.
 
-```text
-Context
-  observation
-  robot_state
-  task
-  history
-  constraints
+## 5. Candidate support and representation
 
-Candidate
-  id
-  action_or_trajectory
-  horizon
-  frame
-  provenance
-  metadata
+Three concepts remain independent:
 
-Evaluation
-  candidate_id
-  hard_valid
-  scores
-  uncertainty
-  reasons
-  latency
+- **Support:** which physical motions are present in the candidate set.
+- **Encoding:** how the same motion is described to a scorer.
+- **Execution:** how the chosen motion is tracked by the controller.
 
-DecisionTrace
-  context_ref
-  candidates
-  evaluations
-  selected_candidate
-  execution_result
-  timing
-```
+A trajectory proposer or policy can expand support without changing the scorer. A semantic token or relative-target encoding can change the scorer input without changing support. Experiments must say which axis changes.
 
-These are conceptual schemas, not yet an API commitment.
+A shared scene encoder is optional. P1 numeric context needs no foundation model. P2 first uses a lightweight shared candidate encoder. A learned visual encoder, VLA candidate generator, or world-model rollout can be added behind existing contracts without becoming mandatory dependencies.
 
-## Why this decomposition?
+## 6. Timing
 
-Direct action generation makes failure modes difficult to separate: bad context, weak proposals, incorrect value estimation, constraint violations, and controller failures. Candidate-based selection exposes intermediate alternatives and creates experimentally separable modules.
+Default design values are a 20 Hz environment control interface, an eight-tick planned horizon, and four executed ticks per decision. These are experimental settings, not claims of achieved hardware frequency. The simulator's internal integration timestep is separate and is logged.
 
-The same candidate pool can be scored by heuristics, a learned value model, a multimodal judge, or an oracle. Conversely, the same selector can consume candidates from multiple proposal mechanisms.
+Paused simulation isolates policy choice. A later latency-aware mode advances the environment while inference runs under a declared hold/continue policy; it must report observation age, missed deadlines, and physical-time success. Never infer closed-loop frequency from requests per second or batched throughput.
 
-## Evaluation axes
+## 7. Acceptance boundaries
 
-| Axis | Example metrics |
-| --- | --- |
-| Candidate quality | oracle-in-set success, coverage, diversity |
-| Selection quality | top-1 success, regret vs. oracle, ranking metrics |
-| Calibration | reliability / expected calibration error where applicable |
-| Safety | invalid-selection rate, constraint violations |
-| Closed-loop behavior | task success, recovery rate, steps/replans |
-| Efficiency | proposal latency, scoring latency, end-to-end decision latency |
-| Robustness | perturbations, distractors, candidate-set shift |
-
-**Oracle-in-set performance is a key diagnostic.** If no good action exists in the candidate set, improving the selector cannot solve the failure. This separates proposal failures from selection failures.
-
-## Staged implementation
-
-**Phase 0 — Contract.** Define schemas, logging, reproducibility conventions, and a minimal environment adapter.
-
-**Phase 1 — Harness.** Build deterministic candidate sources, constraint filters, heuristic scorers, oracle analysis, and closed-loop evaluation. The goal is a trustworthy measurement system, not a neural model.
-
-**Phase 2 — Learned selection.** Add learned scorers/rankers while holding proposal sets fixed where possible. Compare pointwise value prediction, pairwise ranking, and set-aware selection.
-
-**Phase 3 — Closed-loop adaptation.** Introduce replanning, temporal context, uncertainty-aware abstention, and execution feedback.
-
-**Phase 4 — Extensions.** Study learned proposal generation, richer multimodal context, hierarchical decisions, and fast/slow decision pathways.
+Before learning: frame and gripper tests, candidate immutability, exact mock replay, bounded retries, privilege isolation, operational-check coverage, and paired simulator trials must pass. Detailed contracts are in [contracts](contracts.md); experiment gates are in [experiments](experiments.md).
