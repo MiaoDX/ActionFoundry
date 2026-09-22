@@ -4,7 +4,7 @@ The next task is implementation, not further architecture brainstorming. Start w
 
 ## 1. Package boundaries
 
-Target Python 3.10 for the initial core and robosuite worker. Use NumPy, standard-library dataclasses/Protocol/argparse, and a strict configuration/serialization layer. PyYAML may parse configs; unknown fields must fail validation. Add pytest and a linter/type checker for development. Torch, vision models, remote APIs, and simulators are optional dependencies with lazy imports.
+Target Python 3.10 for the initial core and robosuite worker. Use NumPy, standard-library dataclasses/Protocol/argparse, and a strict configuration/serialization layer. PyYAML may parse configs; unknown fields must fail validation. Add pytest and a linter/type checker for development. Torch, vision models, remote APIs, simulators, and OpenWAM are optional dependencies with lazy imports.
 
 The exact dependency lock is created on the local machine after install and smoke tests. Save separate core, robosuite, and later LIBERO worker locks. LIBERO's upstream example uses Python 3.8.13; isolate that stack rather than downgrading the entire core. A worker protocol can exchange versioned JSON and array-file references over a local subprocess boundary. Do not copy the whole core into each dependency environment.
 
@@ -46,6 +46,8 @@ Create only modules needed by the current vertical slice. Avoid an abstract plug
 | I6 | Offline branch labels | Continuation and controller state restoration; privilege-isolation audit |
 | I7 | P1 confirmatory report | S0/S1/D0, E02 diagnostics, explicit G0–G2 assessment |
 | I8 | P2 model/data pipeline | Only after a measured selector gap; matched-data D1 comparator |
+| I9 | OpenWAM worker adapter | Reproduce pinned checkpoint baseline; action/state mapping and provenance tests |
+| I10 | WAM decision experiments | Frozen-feature head first; conditional prediction/joint training only after E10/E11 gates |
 
 Each packet can be a small implementation commit. Do not run I8 merely because its module is easy to add. A failing pilot may legitimately lead to a proposer or controller fix before learning.
 
@@ -91,3 +93,12 @@ A new machine can install the pinned P0/P1 environments, run the documented fixt
 ## Suggested coding-agent opening task
 
 > Read AGENTS.md and the v0.1 specs. Implement I0-I3 only: typed contracts, canonical action compilation, a deterministic NumPy mock environment, bounded proposal/selection/execution loop, append-only traces, replay, and tested metrics. Add passing CPU tests and a runnable mock config. Do not add model training, remote APIs, simulator downloads, or placeholder VLA integrations. Report actual test commands and failures, then identify the next concrete I4 dependency task.
+
+
+## 7. OpenWAM integration boundary
+
+Do not vendor OpenWAM into the core package. Use an isolated worker/environment with its own Python/GPU dependency lock and communicate through the same versioned local protocol used for simulator workers. Pin the upstream repository/checkpoint/config and preserve its resolved Hydra configuration with each experiment.
+
+The first adapter supports inference only: reset/session identity, observation conversion, action/state normalization, action-chunk output, timing, and checkpoint provenance. Training remains an explicit OpenWAM job. If later experiments add an ActionFoundry decision head, keep the head/config/checkpoint separately identifiable so frozen-backbone and fine-tuned results cannot be confused.
+
+Before any joint training, reproduce one official/local OpenWAM benchmark baseline within tolerance and audit action slots, masks, temporal horizon, camera preprocessing, normalization, and inference horizon [R27](references.md#r27). A failed reproduction blocks claims about ActionFoundry improvements but does not block P0–P2.

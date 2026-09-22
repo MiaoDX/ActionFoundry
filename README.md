@@ -17,7 +17,7 @@ ActionFoundry studies when explicit action proposals, evaluation, and selection 
 - Separate candidate proposal, representation, scoring, selection, and execution. Preserve a direct-policy baseline outside the candidate path.
 - Begin with transparent, state-based simulation and no model training. Introduce learned selection only after replay and proposal quality are measurable.
 - Keep deployable observations separate from privileged simulator diagnostics. Treat candidate-choice scores and physical-success probabilities as different quantities.
-- Evaluate closed-loop behavior from the first simulator milestone. Later phases add recovery, visual policies, and optional world-model evaluation—not the first feedback loop.
+- Evaluate closed-loop behavior from the first simulator milestone. Treat learned world-action models as a parallel research axis once the basic harness is trustworthy: they may propose actions, expose predictive representations, or predict candidate-conditioned futures.
 
 ## Starting scope
 
@@ -26,8 +26,8 @@ ActionFoundry studies when explicit action proposals, evaluation, and selection 
 | P0 — Contracts | CPU-only mock environment, schemas, frame conversions, traces | Unit, isolation, and replay tests |
 | P1 — Harness | robosuite Panda Lift, then Stack; deterministic proposals and selectors | Paired rollouts, candidate coverage, failure attribution |
 | P2 — Learned selection | Fixed-pool state rankers, direct behavior-cloning control | Held-out regret and closed-loop comparisons |
-| P3 — Transfer and recovery | LIBERO-Spatial, visual policy proposals, bounded replanning | Matched observation/control budgets and OOD evaluation |
-| P4 — Optional extensions | Learned dynamics, richer proposals, joint training | A demonstrated bottleneck and a new experiment protocol |
+| P3 — Transfer and WAM | LIBERO visual-policy proposals plus OpenWAM integration | Matched policy baselines; action/world representation probes |
+| P4 — Decision-aware world/action learning | Candidate-conditioned prediction, decision heads, recovery, optional joint training | Decision utility, predictive fidelity, and OOD/recovery ablations |
 
 **Measure first, learn second.** A negative result is a valid outcome; candidate selection is the hypothesis, not the conclusion.
 

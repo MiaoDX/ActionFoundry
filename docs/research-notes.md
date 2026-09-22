@@ -28,6 +28,17 @@ No ActionFoundry runtime, training, or manipulation experiment was run for this 
 
 ## Remaining research questions
 
-Where does failure originate: insufficient proposals, incorrect value estimates, missing observations, bad control interpretation, or recovery? Does a scorer transfer across proposal sources or merely learn their ordering? Does its benefit survive equal action support, controller, supervision, and wall-clock budgets? Does an apparent state-based advantage survive visual perception and model latency? These questions determine the next stage; the project is not required to produce a Jev-like model if simpler baselines solve the problem.
+Where does failure originate: insufficient proposals, incorrect value estimates, missing observations, bad control interpretation, or recovery? Does a scorer transfer across proposal sources or merely learn their ordering? Does its benefit survive equal action support, controller, supervision, and wall-clock budgets? Does an apparent state-based advantage survive visual perception and model latency? How much of the useful signal should come from a WAM's action expert, its world representation, explicit candidate-conditioned prediction, or a separate decision head? These questions determine the next stage; the project is not required to produce a Jev-like model if simpler baselines solve the problem.
 
 The phased plan starts with falsifiable contracts and diagnostics. Positive, negative, saturated, and blocked experiments are all legitimate outputs when accompanied by reproducible traces.
+
+
+## World/action model correction
+
+The earlier discussion used “world model” too narrowly as a learned substitute for simulator branch rollout. OpenWAM makes the broader design space explicit: a WAM can jointly organize video/world representations and action generation, with dedicated action capacity and explicit information flow between world and action components [R27](references.md#r27). ActionFoundry therefore treats WAMs as a parallel research axis rather than a late simulator replacement.
+
+The simulator remains useful for privileged counterfactual labels because it can branch from a saved state. The learned WAM has different roles: proposal source, representation source, candidate-conditioned predictor where supported, and eventually a jointly trained backbone with decision supervision. These roles must be evaluated separately.
+
+This also changes the environment view. robosuite/MuJoCo remains the first mechanism-debugging backend, not the only simulator. LIBERO is the first visual transfer benchmark; RoboTwin 2.0 is the preferred richer WAM-oriented follow-up; CALVIN is a later long-horizon/relative-action target; GPU-parallel systems such as ManiSkill or Isaac Lab are scale options rather than immediate dependencies.
+
+A particularly important research distinction is **predictive fidelity versus decision utility**. A representation that predicts pixels or states accurately may still discard distinctions needed to rank actions, while a less faithful predictor may preserve decision-relevant structure. ActionFoundry should measure both instead of using reconstruction quality as a proxy for control value.

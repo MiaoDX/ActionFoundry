@@ -73,3 +73,31 @@ All derived snapshots, branch labels, augmentations, and near-duplicate frames i
 Predeclare perturbation families independently: object-placement shift within validated reachable bounds; sensor noise/occlusion; dynamics or friction shift; exogenous object displacement; candidate-source shift. Freeze magnitudes on development states and store exact schedules before test use. Do not pool impossible resets with selector failures. Report invalid-reset counts and reasons without silently resampling favorable scenes.
 
 Visual background/viewpoint shifts belong to B2 or a visual B1 extension, not state-only generalization claims. Cross-embodiment transfer, tactile input, deformable objects, and real hardware are deferred.
+
+
+## B3 — WAM integration track
+
+After B1 is stable and a visual-policy baseline is reproduced, add an **OpenWAM** worker rather than treating a simulator as the learned world model. The first target is a released or locally fine-tuned OpenWAM checkpoint on a supported manipulation benchmark. Keep ActionFoundry's role thin: translate observations/actions, request action proposals or model representations, evaluate candidates, and log provenance. OpenWAM training, checkpointing, and deployment remain in its own stack [R27](references.md#r27).
+
+Run three distinct studies rather than calling all of them “world-model evaluation”:
+
+1. **WAM as proposer:** OpenWAM supplies one or more action chunks; ActionFoundry compares direct execution with reranking its own candidate set.
+2. **WAM representation:** freeze the WAM and train/evaluate an ActionFoundry decision head over its world/action features, compared with state/vision features of matched capacity.
+3. **Candidate-conditioned prediction:** only if the selected OpenWAM architecture exposes or can be extended to a defensible conditional prediction contract, compare predicted candidate consequences with simulator branches.
+
+For (3), report prediction error and **decision regret relative to simulator-labeled branches separately**. Do not infer candidate-conditioned rollout capability merely from the term WAM.
+
+Use **RoboTwin 2.0** as the preferred second WAM benchmark after LIBERO because the official OpenWAM stack currently supports RoboTwin-family benchmark data and OpenWAM-derived work uses RoboTwin 2.0 [R27](references.md#r27) / [R28](references.md#r28). Exact task suites, action maps, cameras, and checkpoint provenance must be frozen locally before results are claimed.
+
+## B4 — Additional simulator/backend candidates
+
+ActionFoundry is not MuJoCo-only. Additional backends are admitted when they answer a specific experimental need:
+
+| Backend / benchmark | Intended use | Entry condition |
+| --- | --- | --- |
+| CALVIN | Long-horizon language-conditioned manipulation and relative-action studies | Validated maintained adapter/checkpoint protocol |
+| ManiSkill / SAPIEN | Parallel manipulation rollouts and larger candidate-label generation | Branch-label throughput is a measured bottleneck |
+| Isaac Lab / Isaac Sim | GPU-parallel contact-rich or sim-to-real-oriented studies | Scale or embodiment diversity is required |
+| Other engines | New physics/embodiment capability | Adapter capability audit + deterministic/replay characterization |
+
+These are not P1 dependencies. Every adapter declares physics engine, observation privileges, controller semantics, snapshot/restore support, determinism tolerance, rendering path, and license/assets. “Simulator support” never implies exact branchability.

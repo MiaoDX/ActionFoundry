@@ -42,7 +42,10 @@ D1 uses the same source episodes and observations as learned selectors. Log the 
 | E06 | Candidate order, IDs, duplication, paraphrase, and source shift | Shortcut sensitivity and generalization |
 | E07 | H/prefix and inference-delay ablations | Responsiveness, oscillation, and latency tradeoffs |
 | E08 | LIBERO policy alone versus its candidates plus reranker | VLA transfer under matched information |
-| E09 | Measured abstention/reproposal/recovery; optional predicted futures | Incremental value of recovery or dynamics |
+| E09 | Measured abstention/reproposal/recovery | Incremental value of recovery |
+| E10 | Frozen OpenWAM as proposer/representation source | WAM value without ActionFoundry joint training |
+| E11 | Candidate-conditioned WAM predictions vs simulator branches | Predictive fidelity versus decision utility |
+| E12 | Decision-head or joint WAM fine-tuning, only after E10/E11 | Incremental value of decision supervision |
 
 E03 with identical compiled plans and numeric S1 should produce identical decisions. This is a sanity test; encoding effects become meaningful with an encoding-sensitive scorer. E07 varies planned horizon H in {4,8,16}, execution prefix in {1,4,H}, and injected inference delay in {0,50,100,200} ms in the separate latency-aware mode. Each row declares its physical action support and speed limits.
 
@@ -109,4 +112,22 @@ A gate failure produces a report and a scoped revision, not a requirement to mak
 
 P0 requires no GPU, network service, simulator assets, or model downloads. P1 state simulation is designed to avoid a GPU requirement; actual platform compatibility must be tested locally. Default diagnostics stop at 5,000 snapshots and K=16; first run a 100-snapshot throughput/storage pilot and estimate the full cost before expanding. Budget is expressed in episodes, branch-control ticks, model calls, disk bytes, and GPU-hours where applicable—not promised wall-clock time.
 
-P2 starts small. P3/P4 model downloads, substantial GPU jobs, and paid API usage require an explicit run budget and local opt-in. A missing service/checkpoint is reported as skipped, never replaced silently by a different model.
+P2 starts small. P3/P4 model downloads, OpenWAM fine-tuning, substantial GPU jobs, and paid API usage require an explicit run budget and local opt-in. A missing service/checkpoint is reported as skipped, never replaced silently by a different model.
+
+
+## 9. WAM experiment discipline
+
+World/action modeling is a parallel hypothesis, not a synonym for simulator rollout. E10 begins with a frozen OpenWAM checkpoint and keeps the ActionFoundry selector optional. Establish the checkpoint's own benchmark baseline before reranking its candidates.
+
+For E11, pair each eligible simulator snapshot and candidate with both a learned prediction (when the WAM exposes a valid conditional contract) and a privileged simulator branch. Measure at least:
+
+- action/chunk agreement or proposal coverage;
+- state/latent/video prediction error appropriate to the model;
+- candidate ranking agreement;
+- selected-candidate regret against the fixed simulator-labeled pool;
+- closed-loop task success under the same execution budget;
+- inference latency and GPU memory.
+
+A lower reconstruction/prediction error is not automatically a better decision model. Conversely, good ranking does not imply faithful world prediction.
+
+E12 may add a small decision head on frozen WAM features before any end-to-end update. If that is useful, compare: frozen WAM + head; WAM fine-tuned for action/world objectives only; WAM + decision supervision; and a matched non-WAM encoder + decision head. Joint training must state which OpenWAM losses and parameters are changed. Do not describe an auxiliary supervised head as reproducing Jev's undisclosed training recipe.

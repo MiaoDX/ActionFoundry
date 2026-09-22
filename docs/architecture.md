@@ -15,7 +15,7 @@ The diagram shows the common candidate path. The full design also includes a dir
 | Proposer | Context, proposal RNG, budget | Candidate specifications | Query a hidden rollout oracle |
 | Action compiler | Context, candidate, controller contract | Canonical executable plan | Change semantics after scoring |
 | Constraint checker | Context, plan, operational profile | Pass/fail/unknown checks | Treat learned confidence as permission |
-| Outcome predictor, optional | Context, plan | Predicted outcome/features | Substitute true future state without marking privilege |
+| Outcome predictor / WAM adapter | Context, plan or policy context | Predicted outcome/features and/or action proposals | Substitute true future state without marking privilege |
 | Scorer | Context, candidate set, optional predictions | Per-candidate evaluations | Execute or mutate a candidate |
 | Selector | Evaluations, masks, configured rule | Execute/replan/abort/done request | Force an action from an empty valid set |
 | Executor | Chosen plan and observation identity | Bounded-prefix result | Run an expired plan |
@@ -64,14 +64,46 @@ Three concepts remain independent:
 
 A trajectory proposer or policy can expand support without changing the scorer. A semantic token or relative-target encoding can change the scorer input without changing support. Experiments must say which axis changes.
 
-A shared scene encoder is optional. P1 numeric context needs no foundation model. P2 first uses a lightweight shared candidate encoder. A learned visual encoder, VLA candidate generator, or world-model rollout can be added behind existing contracts without becoming mandatory dependencies.
+A shared scene encoder is optional. P1 numeric context needs no foundation model. P2 first uses a lightweight shared candidate encoder. A learned visual encoder, VLA/WAM candidate generator, or candidate-conditioned world predictor can be added behind existing contracts without becoming mandatory dependencies.
 
-## 6. Timing
+## 6. Simulator and learned world-model roles
+
+A simulator and a learned world/action model are separate experimental objects. A simulator supplies environment dynamics and, when save/restore is validated, privileged counterfactual branch labels. A WAM is a learned model that may (a) propose action chunks, (b) expose world/video latents to a scorer, (c) predict candidate-conditioned outcomes, or (d) be jointly trained with decision supervision.
+
+The core runtime therefore admits two optional branches after proposal:
+
+```text
+candidate set
+   |-- environment branch (diagnostic only) -> realized counterfactual outcomes
+   `-- learned WAM branch (runtime-capable)  -> predicted futures / latents
+                                                |
+                                                v
+                                           evaluator -> selector
+```
+
+Never feed diagnostic simulator futures to the online selector. The learned branch may be used online if its inputs satisfy the declared observation regime. Experiments should report both **predictive fidelity** and **decision utility**: a model can have worse pixel/state prediction error yet preserve the ranking information needed to choose a better action.
+
+OpenWAM is the initial WAM integration target because its official stack exposes modular single-, dual-, and tri-system world/action architectures, training/fine-tuning, released checkpoints, and benchmark adapters [R27](references.md#r27). ActionFoundry should integrate through a thin adapter rather than fork its training infrastructure. The first integration reuses a released/fine-tuned checkpoint; decision-head or joint WAM training is a later controlled experiment, not a prerequisite for P0/P1.
+
+## 7. Environment backends
+
+MuJoCo is not the architecture boundary. `EnvironmentAdapter` defines reset/observe/step plus optional snapshot/restore capabilities. Planned backends are:
+
+- NumPy `MockPlanarReach` for exact contract/replay tests;
+- robosuite/MuJoCo for Lift/Stack mechanism debugging and branch diagnostics;
+- LIBERO for language-conditioned visual transfer;
+- RoboTwin 2.0 as the first richer WAM-oriented manipulation target;
+- CALVIN as a later long-horizon/relative-action target when a maintained integration is validated;
+- ManiSkill or Isaac Lab only when parallel data generation becomes a measured bottleneck.
+
+Backends do not need identical physics engines. Capability discovery must say whether exact snapshot/restore, deterministic replay, rendering, privileged state, and branch rollout are supported. Do not emulate unsupported counterfactual capabilities silently.
+
+## 8. Timing
 
 Default design values are a 20 Hz environment control interface, an eight-tick planned horizon, and four executed ticks per decision. These are experimental settings, not claims of achieved hardware frequency. The simulator's internal integration timestep is separate and is logged.
 
 Paused simulation isolates policy choice. A later latency-aware mode advances the environment while inference runs under a declared hold/continue policy; it must report observation age, missed deadlines, and physical-time success. Never infer closed-loop frequency from requests per second or batched throughput.
 
-## 7. Acceptance boundaries
+## 9. Acceptance boundaries
 
 Before learning: frame and gripper tests, candidate immutability, exact mock replay, bounded retries, privilege isolation, operational-check coverage, and paired simulator trials must pass. Detailed contracts are in [contracts](contracts.md); experiment gates are in [experiments](experiments.md).

@@ -181,3 +181,16 @@ The record inspected on September 22, 2026 marks v4 withdrawn on September 20, 2
 PrimitiveVLA (`arXiv:2605.28634`) could not be retrieved in this source pass; no mechanism or numerical result is treated as verified here. Several earlier-mentioned Jev replicas and robotics demos were not individually re-audited for this commit. Their earlier summaries are leads, not established evidence. This does not assert that those projects are absent or invalid.
 
 Before adding a reproduction: verify the primary artifact, publication/revision status, code and weight availability, license, observation privileges, task protocol, and exact checkpoint/source revision. Preserve negative findings and withdrawals rather than silently replacing the evidence.
+
+
+### R27
+
+**OpenWAM: An Open, Modular Exploration Towards Systematic World-Action Model Pretraining (2026) — WAM infrastructure and direct architecture reference.** [Official repository](https://github.com/OpenWAM-Official/OpenWAM), [paper](https://arxiv.org/abs/2609.07398).
+
+The official stack factorizes WAM design into modular world/video and action components and documents single-, dual-, and tri-system architectures, released OpenWAM-α checkpoints, from-scratch training/fine-tuning, and benchmark integrations. The paper reports OpenWAM-α pretraining on roughly 6,400 hours of egocentric human and robot data. For ActionFoundry this is both an implementation substrate and a research comparator: a WAM can be an action proposer or representation source without necessarily exposing arbitrary candidate-conditioned future rollouts. Integrate by pinned adapter rather than copying its training stack. Repository checked September 22, 2026.
+
+### R28
+
+**LD4WAM: Learning Latent Dynamics from Human Videos for World Action Models (2026) — adjacent learned-dynamics reference.** [Paper](https://arxiv.org/abs/2608.22403), linked from the official OpenWAM repository.
+
+The OpenWAM project describes LD4WAM as learning a latent dynamics model from human videos and coupling it with a video DiT and action expert on the OpenWAM framework, with evaluation on RoboTwin 2.0. It is relevant to the hypothesis that decision-relevant dynamics can live in latent space rather than requiring full pixel prediction. ActionFoundry does not inherit its results; reproduce the relevant checkpoint/protocol before making quantitative comparisons.

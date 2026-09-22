@@ -44,11 +44,17 @@ Report `state`, `vision_assisted`, `vision_only`, or `oracle_diagnostic` for the
 
 Measure simulator-control time separately from wall-clock time. Offline fixed-pool ranking and fresh closed-loop rollouts answer different questions. Paused simulation can measure algorithmic behavior but cannot demonstrate real-time control.
 
-## D09 — Optional world model
+## D09 — WAM is a parallel research axis
 
-A world model may predict outcomes for candidate plans, but is neither required nor interchangeable with simulator ground truth. Video-trained action policies are not automatically candidate-conditioned rollout models. P4 opens only when P1–P3 diagnose a need for prediction.
+A simulator and a learned world/action model have different jobs. Simulator branches provide privileged counterfactual labels after snapshot/restore validation. A WAM may provide action proposals, world/action representations, or candidate-conditioned predictions when its architecture actually supports that contract. OpenWAM is the first integration target because it exposes modular WAM architectures, training/fine-tuning, released checkpoints, and manipulation benchmark adapters [R27](references.md#r27).
 
-## D10 — Honest handoff
+P0/P1 do not depend on a WAM. After the basic harness is trustworthy, WAM experiments proceed in increasing commitment: frozen checkpoint as proposer/representation source; small decision head on frozen features; candidate-conditioned prediction where supported; only then optional joint WAM + decision training. Predictive fidelity and decision utility are reported separately.
+
+## D10 — Simulator backend is an interface
+
+MuJoCo/robosuite is the first mechanism-debugging backend, not a project-wide simulator commitment. LIBERO is the first visual-transfer benchmark, RoboTwin 2.0 is the preferred richer WAM-oriented follow-up, and CALVIN/ManiSkill/Isaac Lab remain conditional extensions. Each adapter declares snapshot/restore, determinism, observation privilege, controller, and rendering capabilities; unsupported branchability is never emulated silently.
+
+## D11 — Honest handoff
 
 This commit provides specifications and examples. It does not provide a trained model, a completed experiment, or a recovered copy of the separate Deep Research report. References were checked at the primary-source level described in the source map; reported paper results were not reproduced.
 
