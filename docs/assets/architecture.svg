@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300" role="img" aria-labelledby="title desc">
+<title id="title">ActionFoundry architecture</title><desc id="desc">Candidate-based closed-loop robot decision architecture.</desc>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8Z" fill="#57606a"/></marker></defs>
+<style>.b{fill:#fff;stroke:#24292f;stroke-width:1.5}.s{fill:#f6f8fa}.t{font:600 15px sans-serif;fill:#24292f}.u{font:12px sans-serif;fill:#57606a}.l{stroke:#57606a;stroke-width:1.5;fill:none;marker-end:url(#a)}</style>
+<rect width="1120" height="300" fill="#fff"/>
+<rect class="b s" x="25" y="80" width="165" height="80" rx="8"/><text class="t" x="107" y="112" text-anchor="middle">Observation + Task</text><text class="u" x="107" y="138" text-anchor="middle">state · vision · language</text>
+<rect class="b" x="225" y="80" width="145" height="80" rx="8"/><text class="t" x="297" y="112" text-anchor="middle">Context</text><text class="u" x="297" y="138" text-anchor="middle">representation</text>
+<rect class="b" x="405" y="60" width="175" height="120" rx="8"/><text class="t" x="492" y="96" text-anchor="middle">Candidate Proposal</text><text class="u" x="492" y="123" text-anchor="middle">primitives · sampler</text><text class="u" x="492" y="145" text-anchor="middle">planner · policy</text>
+<rect class="b" x="615" y="60" width="185" height="120" rx="8"/><text class="t" x="707" y="96" text-anchor="middle">Evaluate</text><text class="u" x="707" y="123" text-anchor="middle">hard constraints</text><text class="u" x="707" y="145" text-anchor="middle">heuristics · learned scores</text>
+<rect class="b" x="835" y="80" width="115" height="80" rx="8"/><text class="t" x="892" y="112" text-anchor="middle">Select</text><text class="u" x="892" y="138" text-anchor="middle">or abstain</text>
+<rect class="b s" x="985" y="80" width="110" height="80" rx="8"/><text class="t" x="1040" y="112" text-anchor="middle">Execute</text><text class="u" x="1040" y="138" text-anchor="middle">controller</text>
+<path class="l" d="M190 120H225"/><path class="l" d="M370 120H405"/><path class="l" d="M580 120H615"/><path class="l" d="M800 120H835"/><path class="l" d="M950 120H985"/>
+<path class="l" d="M1040 160V235H108V165"/><text class="u" x="570" y="260" text-anchor="middle">execution feedback · re-observe · re-propose · re-select</text>
+</svg>
